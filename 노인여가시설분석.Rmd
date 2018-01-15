@@ -1,0 +1,257 @@
+---
+title: "노인여가시설 분석"
+output: github_document
+---
+#1.데이터 소개
+
+서울은 인구의 15%가 노인일 만큼 고령화가 빠르게 진행되고 있다.
+하지만 이 기사에 따르면 노인의 상당수가 갈 곳이 없어 거리로 나오고 있는 실정이라고 한다. 갈 곳이 없어 헤매고 있는 노인들을 위한 노인여가시설의 분포를 분석해 보았다.
+http://ch1.tbroad.com/content/view?parent_no=24&content_no=57&p_no=41927 
+
+‘서울시 노인여가 복지시설 (구별) 통계’ 의 데이터를 가지고 분석을 진행했다.
+데이터의 출처는 ‘서울특별시 어르신복지과’이고, ‘서울특별시 통계데이터담당관’에서 이 데이터를 담당하고 있다. 
+
+
+#2.데이터 분석
+
+
+#패키지 로드
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readxl)
+```
+
+
+#데이터 불러오기
+
+```{r}
+raw<-read_excel("노인여가 복지시설(구별).xls")
+```
+
+
+#데이터 파악하기
+
+```{r}
+data<-raw
+dim(data)
+head(data)
+tail(data)
+View(data)
+```
+
+
+
+#데이터 가공하기
+
+```{r}
+data<-data %>% select(2,3,4,5,6,7)
+data<-data[-c(1,28),]
+data<-rename(data,종사자수=노인복지관__1,
+             지역=구분)
+data<-rename(data,area=지역,
+             total=시설합계,
+             welfare=노인복지관,
+             people=종사자수,
+             seniorcenter=경로당,
+             class=노인교실)
+```
+
+
+#변수타입 변환
+
+```{r}
+str(data)
+data$total<-as.numeric(data$total)
+data$welfare<-as.numeric(data$welfare)
+data$people<-as.numeric(data$people)
+data$seniorcenter<-as.numeric(data$seniorcenter)
+data$class<-as.numeric(data$class)
+str(data)
+summary(data)
+```
+
+
+
+#전체 서울시 노인시설 비율
+
+```{r}
+pct<-data %>% filter(area=="합계") %>% mutate(welfare_pct=round(welfare/total*100,digits=2),
+                                       seniorcenter_pct=round(seniorcenter/total*100,digits=2),
+                                       class_pct=round(class/total*100,digits=2)) %>% select(7,8,9)
+pct
+```
+
+
+
+##전체 서울시 노인시설 비율-그래프1
+
+```{r}
+test <- c(76, 3369, 363)
+name <- c("노인복지관","경로당","노인교실")
+pie(test, labels = name, main = "전체 서울시 노인시설 비율")
+
+```
+
+
+##전체 서울시 노인시설 비율-그래프2
+
+```{r}
+percent <- round(test/sum(test) * 100,digits=2)
+percent <- paste(percent, "%", sep="")
+name2 <- paste(name, percent)
+pie(test, labels = name2, main = "전체 서울시 노인시설 비율")
+
+```
+
+
+##전체 서울시 노인시설 비율-그래프3
+
+```{r}
+library(plotrix)
+test
+name
+pie3D(test, labels = name, explode = 0.1, main = "전체 서울시 노인시설 비율")
+```
+
+
+
+##전체 서울시 노인시설 비율-그래프4
+
+
+```{r}
+pie3D(test, labels = name2, explode = 0.1, main = "전체 서울시 노인시설 비율")
+```
+
+
+서울시의 전체 노인 시설 가운데 경로당 비율은 88.47%를 차지해 가장 높았다. 노인복지관은 2%, 노인교실은 9.53%에 불과하다. 그렇다면 가장 높은 비율을 차지하는 경로당은 구 별로 다르게 분포되어 있을까?
+
+
+#구별 시설 수 비교
+
+```{r}
+data2<-data[-c(1),]
+data_total<-data2 %>% arrange(desc(total)) %>% 
+  select(1,2)
+data_total
+```
+
+
+
+우선 노인 여가시설의 수는 노원구가 가장 많았으며, 강서구, 구로구 순으로 이어졌다.
+
+
+#구별 여가시설 비율
+
+```{r}
+area_total<-data2 %>% group_by(area) %>% 
+  mutate(t_pct=round(total/3808*100,digits=2)) %>% 
+  arrange(desc(t_pct)) %>% select(area,t_pct)
+area_total
+```
+
+
+
+이를 비율로 나타내면 서울시 내의 노인 시설 분포비율을 구 별로 비교해 볼 수 있다. 
+이번엔 경로당 비율을 비교해보자.
+
+
+
+#구별 경로당 비율
+
+```{r}
+area_center<-data2 %>% group_by(area) %>% 
+  mutate(s_pct=round(seniorcenter/3369*100,digits=2)) %>% 
+  arrange(desc(s_pct)) %>% select(area,s_pct)
+area_center
+```
+
+
+경로당 비율 또한 노원구, 강서구, 구로구 순으로 비슷하게 분포되어 있다. 
+
+다음으로는 서울 시 내에서 구별 경로당의 비율이 아닌, 구별 노인여가시설 중 경로당의 비율을 살펴보았다.
+
+
+
+#구별 노인여가시설 중 경로당 비율
+
+```{r}
+seniorcenter_percent<-data %>% group_by(area) %>% 
+  mutate(seniorcenter_pct=round(seniorcenter/total*100,2)) %>% 
+  arrange(desc(seniorcenter_pct)) %>% select(area,seniorcenter_pct)
+View(seniorcenter_percent)
+
+seniorcenter_percent %>% filter(area=="합계")
+```
+
+
+노원구의 경로당이 노원구의 노인 시설 중에 93.85%의 비율로 가장 많은 시설에 속해있으며, 도봉구는 93.15%, 성북구는 92.44%로 그 뒤를 이었다. 이는 서울시 전체 경로당의 평균 비율인 88.47%보다 높은 비율이었다.
+
+그 반면 용산구는 76.58%로 노인 시설 중 경로당의 비율이 가장 낮았다.
+
+
+
+#구별 노인여가시설과 종사자 비율(합계 행의 비율 = 평균비율)
+
+```{r}
+people_pct<-data %>% group_by(area) %>% 
+  mutate(people_pct=round(people/total*100,2)) %>% 
+  arrange(desc(people_pct)) %>% select(area,people_pct)
+
+View(people_pct)
+```
+
+하지만 노원구는 노인 시설에 비하면 종사자의 비율이 가장 낮은결과를 보였다.
+
+
+#구별 노인여가시설과 종사자 비율-그래프
+
+```{r}
+ggplot(data=people_pct, aes(x=reorder(area,people_pct),y=people_pct,fill=people_pct))+geom_col()+coord_flip()
+```
+
+
+
+##상위10
+
+```{r}
+people_top10<-data %>% group_by(area) %>% 
+  mutate(people_pct=round(people/total*100,2)) %>% 
+  arrange(desc(people_pct)) %>% select(area,people_pct) %>% head(10)
+people_top10
+```
+
+
+
+##상위10-그래프
+
+```{r}
+ggplot(data=people_top10, aes(x=reorder(area,people_pct),y=people_pct,fill=people_pct))+geom_col()+coord_flip()
+```
+
+
+
+
+##하위10
+
+```{r}
+people_bottom10<-data %>% group_by(area) %>% 
+  mutate(people_pct=round(people/total*100,2)) %>% 
+  arrange(people_pct) %>% select(area,people_pct) %>% head(10)
+people_bottom10
+```
+
+
+
+##하위10-그래프
+
+```{r}
+ggplot(data=people_bottom10, aes(x=reorder(area,people_pct),y=people_pct,fill=people_pct))+geom_col()+coord_flip()
+```
+
+
+
+
+
+
